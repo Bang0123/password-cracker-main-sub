@@ -20,7 +20,6 @@ namespace MasterCrack
         public string FilePath { get; set; } = "Passwords.txt";
         public int Indexer { get; set; }
         public object Locker = new object();
-
         public Master()
         {
             EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5678);
