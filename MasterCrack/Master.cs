@@ -15,6 +15,7 @@ namespace MasterCrack
         public TcpListener MasterServer { get; set; }
         public IPEndPoint EndPoint { get; set; }
         public List<TcpClient> ConnectClients { get; set; }
+        public List<FullUser> ResultsList { get; set; }
         public List<UserInfo> Workload { get; set; }
         public List<String> DictionaryList { get; set; }
         public string FilePath { get; set; } = "Passwords.txt";
@@ -25,6 +26,7 @@ namespace MasterCrack
             EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5678);
             MasterServer = new TcpListener(EndPoint);
             ConnectClients = new List<TcpClient>();
+            ResultsList = new List<FullUser>();
             Console.WriteLine("Server created");
             Indexer = 0;
         }

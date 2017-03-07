@@ -8,6 +8,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using MasterCrack.Model;
 using Newtonsoft.Json;
 
 namespace MasterCrack
@@ -15,6 +16,7 @@ namespace MasterCrack
     public class ConnectionHandler
     {
         public Master MyMaster { get; set; }
+        private bool Workload;
         private TcpClient connectionSocket;
         
 
@@ -51,8 +53,28 @@ namespace MasterCrack
                         string listString = JsonConvert.SerializeObject(MyMaster.GiveWorkLoad());
                         sw.WriteLine(listString);
                         sw.WriteLine("EndOfFile");
-                        
+                        Workload = true;
                     }
+                    if (Workload)
+                    {
+                        string receivedstring = "";
+                        while (true)
+                        {
+                            string incomingString = sr.ReadLine();
+                            if (incomingString == "EndOfFile")
+                            {
+                                break;
+                            }
+                            receivedstring += incomingString;
+                        }
+                        CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
+                        Workload = false;
+                        MyMaster.ResultsList.AddRange(results.Results);
+                        Console.WriteLine("this client finito: " + connectionSocket.GetHashCode());
+                        Console.WriteLine(results.TotalsString);
+                        Console.WriteLine(results.TimeString);
+                    }
+                    
                     message = sr.ReadLine();
                     Console.WriteLine("Client: " + message);
                 }
