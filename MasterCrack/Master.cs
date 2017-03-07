@@ -18,6 +18,8 @@ namespace MasterCrack
         public List<UserInfo> Workload { get; set; }
         public List<String> DictionaryList { get; set; }
         public string FilePath { get; set; } = "Passwords.txt";
+        public int Indexer { get; set; }
+        public object Locker = new object();
 
         public Master()
         {
@@ -25,6 +27,22 @@ namespace MasterCrack
             MasterServer = new TcpListener(EndPoint);
             ConnectClients = new List<TcpClient>();
             Console.WriteLine("Server created");
+            Indexer = 0;
+        }
+
+        public List<String> GiveWorkLoad()
+        {
+            lock (Locker)
+            {
+                List<String> list = new List<string>();
+                for (int i = Indexer; i < Indexer + 1000 && i < DictionaryList.Count; i++)
+                {
+                    list.Add(DictionaryList[i]);
+                }
+                Indexer += 1000;
+                return list;
+            }
+
         }
 
         public void Invoke()
@@ -41,7 +59,7 @@ namespace MasterCrack
 
         }
 
-        
+
 
         private List<string> PrepareDictionary(string path)
         {
