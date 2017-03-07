@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="ConnectionHandler.cs" />
     <Compile Include="Master.cs" />
+    <Compile Include="Model\CrackResults.cs" />
     <Compile Include="Model\FullUser.cs" />
     <Compile Include="Model\UserInfo.cs" />
     <Compile Include="Model\IUnencryptedPassword.cs" />

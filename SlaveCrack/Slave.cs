@@ -44,10 +44,14 @@ namespace SlaveCrack
                             Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList));
                         }
                         stopwatch.Stop();
-                        Console.WriteLine(string.Join(", ", Results));
-                        Console.WriteLine("Out of {0} password {1} was found ", UserInfosList.Count, Results.Count);
+                        //Console.WriteLine(string.Join(", ", Results));
+                        string total = $"Out of {UserInfosList.Count} password {Results.Count} was found ";
+                        Console.WriteLine(total);
                         Console.WriteLine();
-                        Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
+                        string time = $"Time elapsed: {stopwatch.Elapsed}";
+                        Console.WriteLine(time);
+                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time);
+                        SendResult(sw, resultObject);
                     }
                 }
             }
@@ -57,6 +61,12 @@ namespace SlaveCrack
             }
         }
 
+        private void SendResult(StreamWriter sw, CrackResults cr)
+        {
+            string serializedobj = JsonConvert.SerializeObject(cr);
+            sw.WriteLine(serializedobj);
+            sw.WriteLine("EndOfFile");
+        }
         private List<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
         {
             sw.WriteLine("getworkstarted");
