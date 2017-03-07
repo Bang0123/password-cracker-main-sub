@@ -8,6 +8,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace MasterCrack
 {
@@ -15,6 +16,7 @@ namespace MasterCrack
     {
         public Master MyMaster { get; set; }
         private TcpClient connectionSocket;
+        
 
         public ConnectionHandler(TcpClient tcpClient)
         {
@@ -35,17 +37,21 @@ namespace MasterCrack
                 StreamWriter sw = new StreamWriter(ns);
                 sw.AutoFlush = true;
                 string message = sr.ReadLine();
-                string answer = "";
 
                 while (!string.IsNullOrEmpty(message))
                 {
-                    if (message.StartsWith("GET"))
+                    if (message.StartsWith("getpw"))
                     {
+                        string passWordS = JsonConvert.SerializeObject(MyMaster.Workload);
+                        sw.WriteLine(passWordS);
+                        sw.WriteLine("EndOfFile");
+                    }
+                    if (message.StartsWith("getdc"))
+                    {
+                        string listString = JsonConvert.SerializeObject(MyMaster.GiveWorkLoad());
+                        sw.WriteLine(listString);
+                        sw.WriteLine("EndOfFile");
                         
-
-
-
-                        sw.WriteLine(answer);
                     }
                     message = sr.ReadLine();
                     Console.WriteLine("Client: " + message);
