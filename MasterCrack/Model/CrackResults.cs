@@ -14,6 +14,11 @@ namespace MasterCrack.Model
         public string TotalsString { get; set; }
         public string TimeString { get; set; }
 
+        public CrackResults()
+        {
+            
+        }
+
         public CrackResults(List<FullUser> results, TimeSpan timeElapsed, string totalsString, string timeString)
         {
             Results = results;
