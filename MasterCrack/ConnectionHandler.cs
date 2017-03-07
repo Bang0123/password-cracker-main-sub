@@ -19,10 +19,9 @@ namespace MasterCrack
         public ConnectionHandler(TcpClient tcpClient)
         {
             connectionSocket = tcpClient;
-
         }
 
-        public void ServiceConnection()
+        public void HandleConnection()
         {
             Stream ns = connectionSocket.GetStream();
             try

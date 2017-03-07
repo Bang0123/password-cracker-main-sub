@@ -9,11 +9,6 @@ namespace MasterCrack.Util
 {
     public class PasswordUtils
     {
-
-        
-
-
-
         /// <summary>
         /// Compares to byte arrays. Encrypted words are byte arrays
         /// </summary>

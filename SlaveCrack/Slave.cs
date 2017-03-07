@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using MasterCrack.Model;
@@ -13,25 +14,41 @@ namespace SlaveCrack
     {
         public TcpClient SlaveToMasterClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
+        public string Ip { get; set; } = "127.0.0.1";
         public void BeginWork()
         {
             // TODO Connect this to master
             // TODO MAKE this accept tcp work from master
-            throw new NotImplementedException();
+            try
+            {
+                TcpClient tcpClient = new TcpClient(Ip, 5678);
+                Stream stream = tcpClient.GetStream();
+
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+
+            
         }
-        
+
 
         public Slave()
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
             //_messageDigest = new MD5CryptoServiceProvider();
         }
-        
+
         /// <summary>
         /// Runs the password cracking algorithm
         /// </summary>
         public void RunCracking()
         {
+
+            // TODO Change method of reading passwords
             Stopwatch stopwatch = Stopwatch.StartNew();
 
             List<UserInfo> userInfos =
