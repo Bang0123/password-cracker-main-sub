@@ -4,7 +4,7 @@ namespace SlaveCrack
 {
     public class Program
     {
-        static void Main(string[] args)
+        static void MainX(string[] args)
         {
             Slave slave = new Slave();
             slave.BeginWork();
