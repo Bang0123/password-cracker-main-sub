@@ -7,14 +7,18 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using MasterCrack.Model;
 using MasterCrack.Util;
+using Newtonsoft.Json;
 
 namespace SlaveCrack
 {
     public class Slave
     {
-        public TcpClient SlaveToMasterClient { get; set; }
+        public TcpClient tcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
         public string Ip { get; set; } = "127.0.0.1";
+        public List<UserInfo> UserInfosList { get; set; }
+        public List<string> DictionaryList { get; set; }
+        public List<FullUser> Results { get; set; }
         public void BeginWork()
         {
             // TODO Connect this to master
@@ -23,16 +27,68 @@ namespace SlaveCrack
             {
                 TcpClient tcpClient = new TcpClient(Ip, 5678);
                 Stream stream = tcpClient.GetStream();
+                Results = new List<FullUser>();
+                StreamWriter sw = new StreamWriter(stream);
+                StreamReader sr = new StreamReader(stream);
+                sw.AutoFlush = true;
+                UserInfosList = GetPasswords(sr, sw);
 
-
+                while (true)
+                {
+                    DictionaryList = GetWorkStarted(sr, sw);
+                    if (DictionaryList != null || DictionaryList.Count != 0)
+                    {
+                        Stopwatch stopwatch = Stopwatch.StartNew();
+                        foreach (var dictionaryEntry in DictionaryList)
+                        {
+                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList));
+                        }
+                        stopwatch.Stop();
+                        Console.WriteLine(string.Join(", ", Results));
+                        Console.WriteLine("Out of {0} password {1} was found ", UserInfosList.Count, Results.Count);
+                        Console.WriteLine();
+                        Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
+                    }
+                }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
+        }
 
+        private List<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
+        {
+            sw.WriteLine("getworkstarted");
+            string receivedstring = "";
+            while (true)
+            {
+                string incomingString = sr.ReadLine();
+                if (incomingString == "EndOfFile")
+                {
+                    break;
+                }
+                receivedstring += incomingString;
+            }
+            List<string> list = JsonConvert.DeserializeObject<List<string>>(receivedstring);
+            return list;
+        }
 
-            
+        private List<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
+        {
+            string receivedstring = "";
+            sw.WriteLine("getpasswordslist");
+            while (true)
+            {
+                string incomingString = sr.ReadLine();
+                if (incomingString == "EndOfFile")
+                {
+                    break;
+                }
+                receivedstring += incomingString;
+            }
+            List<UserInfo> list = JsonConvert.DeserializeObject<List<UserInfo>>(receivedstring);
+            return list;
         }
 
 
@@ -40,35 +96,6 @@ namespace SlaveCrack
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
             //_messageDigest = new MD5CryptoServiceProvider();
-        }
-
-        /// <summary>
-        /// Runs the password cracking algorithm
-        /// </summary>
-        public void RunCracking()
-        {
-
-            // TODO Change method of reading passwords
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            List<UserInfo> userInfos =
-                PasswordFileHandler.ReadPasswordFile("passwords.txt");
-            List<FullUser> result = new List<FullUser>();
-            using (FileStream fs = new FileStream("webster-dictionary.txt", FileMode.Open, FileAccess.Read))
-            using (StreamReader dictionary = new StreamReader(fs))
-            {
-                while (!dictionary.EndOfStream)
-                {
-                    String dictionaryEntry = dictionary.ReadLine();
-                    IEnumerable<FullUser> partialResult = CheckWordWithVariations(dictionaryEntry, userInfos);
-                    result.AddRange(partialResult);
-                }
-            }
-            stopwatch.Stop();
-            Console.WriteLine(string.Join(", ", result));
-            Console.WriteLine("Out of {0} password {1} was found ", userInfos.Count, result.Count);
-            Console.WriteLine();
-            Console.WriteLine("Time elapsed: {0}", stopwatch.Elapsed);
         }
 
         /// <summary>
@@ -142,7 +169,7 @@ namespace SlaveCrack
             {
                 if (PasswordUtils.CompareBytes(userInfo.EntryptedPassword, encryptedPassword))
                 {
-                    results.Add(new FullUser(userInfo.Username, possiblePassword));
+                    results.Add(new FullUser(userInfo, possiblePassword));
                     Console.WriteLine(userInfo.Username + " " + possiblePassword);
                 }
             }

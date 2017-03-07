@@ -32,6 +32,36 @@ namespace MasterCrack.Model
             UnencryptedPassword = password;
         }
 
+        public FullUser(UserInfo user, string crackedpwd)
+        {
+            if (String.IsNullOrWhiteSpace(user.Username))
+            {
+                throw new ArgumentNullException("username");
+            }
+            if (String.IsNullOrWhiteSpace(user.EntryptedPasswordBase64))
+            {
+                throw new ArgumentNullException("password");
+            }
+            Username = user.Username;
+            EntryptedPasswordBase64 = user.EntryptedPasswordBase64;
+            EntryptedPassword = user.EntryptedPassword;
+            UnencryptedPassword = crackedpwd;
+        }
+        public FullUser(UserInfo user)
+        {
+            if (String.IsNullOrWhiteSpace(user.Username))
+            {
+                throw new ArgumentNullException("username");
+            }
+            if (String.IsNullOrWhiteSpace(user.EntryptedPasswordBase64))
+            {
+                throw new ArgumentNullException("password");
+            }
+            Username = user.Username;
+            EntryptedPasswordBase64 = user.EntryptedPasswordBase64;
+            EntryptedPassword = user.EntryptedPassword;
+        }
+
         public FullUser()
         {
             
