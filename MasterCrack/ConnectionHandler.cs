@@ -13,12 +13,17 @@ namespace MasterCrack
 {
     public class ConnectionHandler
     {
-
+        public Master MyMaster { get; set; }
         private TcpClient connectionSocket;
 
         public ConnectionHandler(TcpClient tcpClient)
         {
             connectionSocket = tcpClient;
+        }
+        public ConnectionHandler(TcpClient tcpClient, Master master)
+        {
+            connectionSocket = tcpClient;
+            MyMaster = master;
         }
 
         public void HandleConnection()

@@ -11,9 +11,12 @@ namespace MasterCrack
 {
     public class Master
     {
+        public string DicPath { get; set; } = "webster-dictionary.txt";
         public TcpListener MasterServer { get; set; }
         public IPEndPoint EndPoint { get; set; }
         public List<TcpClient> ConnectClients { get; set; }
+        public List<UserInfo> Workload { get; set; }
+        public List<String> DictionaryList { get; set; }
         public string FilePath { get; set; } = "Passwords.txt";
 
         public Master()
@@ -33,11 +36,26 @@ namespace MasterCrack
 
             // TODO Make master give slaves work
 
-            List<UserInfo> workload = PrepareWorkload(FilePath);
-
+            Workload = PrepareWorkload(FilePath);
+            DictionaryList = PrepareDictionary(DicPath);
 
         }
 
+        
+
+        private List<string> PrepareDictionary(string path)
+        {
+            List<string> ls = new List<string>();
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
+            using (StreamReader dictionary = new StreamReader(fs))
+            {
+                while (!dictionary.EndOfStream)
+                {
+                    ls.Add(dictionary.ReadLine());
+                }
+            }
+            return ls;
+        }
         private List<UserInfo> PrepareWorkload(string path)
         {
             return PasswordFileHandler.ReadPasswordFile(path);
@@ -52,7 +70,7 @@ namespace MasterCrack
                 {
                     Task.Factory.StartNew(() =>
                     {
-                        var ch = new ConnectionHandler(client);
+                        var ch = new ConnectionHandler(client, this);
                         ch.HandleConnection();
                     });
                     ConnectClients.Add(client);
