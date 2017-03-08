@@ -23,7 +23,7 @@ namespace MasterCrack
         public object Locker = new object();
         public Master()
         {
-            EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6789);
+            EndPoint = new IPEndPoint(IPAddress.Any, 6789);
             MasterServer = new TcpListener(EndPoint);
             ConnectClients = new List<TcpClient>();
             ResultsList = new List<FullUser>();
