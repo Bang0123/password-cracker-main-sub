@@ -15,7 +15,7 @@ namespace SlaveCrack
     {
         public TcpClient tcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
-        public string Ip { get; set; } = "192.168.6.232";
+        public string Ip { get; set; } = "192.168.1.8";
         public List<UserInfo> UserInfosList { get; set; }
         public List<string> DictionaryList { get; set; }
         public List<FullUser> Results { get; set; }
