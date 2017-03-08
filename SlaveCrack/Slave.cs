@@ -15,7 +15,7 @@ namespace SlaveCrack
     {
         public TcpClient tcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
-        public string Ip { get; set; } = "127.0.0.1";
+        public string Ip { get; set; } = "192.168.6.232";
         public List<UserInfo> UserInfosList { get; set; }
         public List<string> DictionaryList { get; set; }
         public List<FullUser> Results { get; set; }
@@ -25,13 +25,14 @@ namespace SlaveCrack
             // TODO MAKE this accept tcp work from master
             try
             {
-                TcpClient tcpClient = new TcpClient(Ip, 5678);
+                TcpClient tcpClient = new TcpClient(Ip, 6789);
                 Stream stream = tcpClient.GetStream();
                 Results = new List<FullUser>();
                 StreamWriter sw = new StreamWriter(stream);
                 StreamReader sr = new StreamReader(stream);
                 sw.AutoFlush = true;
                 UserInfosList = GetPasswords(sr, sw);
+                Console.WriteLine("Getting passwords");
 
                 while (true)
                 {
@@ -69,7 +70,7 @@ namespace SlaveCrack
         }
         private List<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
         {
-            sw.WriteLine("getworkstarted");
+            sw.WriteLine("getdc");
             string receivedstring = "";
             while (true)
             {
@@ -87,7 +88,7 @@ namespace SlaveCrack
         private List<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
         {
             string receivedstring = "";
-            sw.WriteLine("getpasswordslist");
+            sw.WriteLine("getpw");
             while (true)
             {
                 string incomingString = sr.ReadLine();
