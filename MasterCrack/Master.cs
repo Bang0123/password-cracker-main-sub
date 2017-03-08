@@ -14,13 +14,41 @@ namespace MasterCrack
         public string DicPath { get; set; } = "webster-dictionary.txt";
         public TcpListener MasterServer { get; set; }
         public IPEndPoint EndPoint { get; set; }
+
+        // TODO Use this list?
         public List<TcpClient> ConnectClients { get; set; }
-        public List<FullUser> ResultsList { get; set; }
-        public List<UserInfo> Workload { get; set; }
+
+        public List<FullUser> ResultsList
+        {
+            get
+            {
+                lock (Locker)
+                {
+                    return _resultsList;
+                }
+            }
+            set { _resultsList = value; }
+        }
+
+        public List<UserInfo> Workload
+        {
+            get
+            {
+                lock (Locker)
+                {
+                    return _workload;
+                }
+            }
+            set { _workload = value; }
+        }
+
         public List<String> DictionaryList { get; set; }
         public string FilePath { get; set; } = "passwords.txt";
         public int Indexer { get; set; }
         public object Locker = new object();
+        private List<UserInfo> _workload;
+        private List<FullUser> _resultsList;
+
         public Master()
         {
             EndPoint = new IPEndPoint(IPAddress.Any, 6789);
@@ -52,15 +80,44 @@ namespace MasterCrack
             Task.Run(() => { AcceptClients(); });
             Console.WriteLine("Server socket started");
             Console.WriteLine("Now accepting and handling is threaded");
-
-            // TODO Make master give slaves work
-
+            Console.WriteLine("Reading the password file");
             Workload = PrepareWorkload(FilePath);
             DictionaryList = PrepareDictionary(DicPath);
+            Console.WriteLine("Dictionary completely loaded");
 
+            LoopTillDone();
         }
 
+        private void LoopTillDone()
+        {
+            while (true)
+            {
+                if (Workload.Count < 1)
+                {
+                    TellClientsShutdown();
+                    PrintResults();
+                    // TODO Jeg havde en ide, om at der skulle ske mere her, nu ved jeg ikke
+                    // TODO kill thread factory process
+                    break;
+                }
+            }
+        }
 
+        private void PrintResults()
+        {
+            foreach (var result in ResultsList)
+            {
+                Console.WriteLine(result.PrintUser());
+            }
+        }
+
+        private void TellClientsShutdown()
+        {
+            foreach (var connectClient in ConnectClients)
+            {
+                connectClient.Close();
+            }
+        }
 
         private List<string> PrepareDictionary(string path)
         {

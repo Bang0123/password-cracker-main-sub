@@ -70,6 +70,17 @@ namespace MasterCrack
                         CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
                         Workload = false;
                         MyMaster.ResultsList.AddRange(results.Results);
+                        
+                        foreach (var resultsResult in results.Results)
+                        {
+                            foreach (var userInfo in MyMaster.Workload)
+                            {
+                                if (resultsResult.Username == userInfo.Username)
+                                {
+                                    MyMaster.Workload.Remove(userInfo);
+                                }
+                            }
+                        }
                         Console.WriteLine("this client finito: " + connectionSocket.GetHashCode());
                         Console.WriteLine(results.TotalsString);
                         Console.WriteLine(results.TimeString);
