@@ -18,12 +18,12 @@ namespace MasterCrack
         public List<FullUser> ResultsList { get; set; }
         public List<UserInfo> Workload { get; set; }
         public List<String> DictionaryList { get; set; }
-        public string FilePath { get; set; } = "Passwords.txt";
+        public string FilePath { get; set; } = "passwords.txt";
         public int Indexer { get; set; }
         public object Locker = new object();
         public Master()
         {
-            EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5678);
+            EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 6789);
             MasterServer = new TcpListener(EndPoint);
             ConnectClients = new List<TcpClient>();
             ResultsList = new List<FullUser>();
