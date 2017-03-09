@@ -44,7 +44,7 @@ namespace MasterCrack
                 {
                     if (message.StartsWith("getpw"))
                     {
-                        string passWordS = JsonConvert.SerializeObject(MyMaster.Workload);
+                        string passWordS = JsonConvert.SerializeObject(MyMaster.Workload.ToList());
                         sw.WriteLine(passWordS);
                         sw.WriteLine("EndOfFile");
                     }
@@ -69,23 +69,10 @@ namespace MasterCrack
                         }
                         CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
                         Workload = false;
-                        MyMaster.ResultsList.AddRange(results.Results);
 
-                        if (results.Results.Count != 0)
-                        {
-                            foreach (var resultsResult in results.Results)
-                            {
-                                for (int i = 0; i < MyMaster.Workload.Count; i++)
-                                {
-                                    if (resultsResult.Username == MyMaster.Workload[i].Username)
-                                    {
-                                        MyMaster.Workload.Remove(MyMaster.Workload[i]);
-                                    }
-                                }
+                        MyMaster.ResultsCallback(results);
 
-                            }
-                        }
-                        Console.WriteLine("this client finito: " + connectionSocket.GetHashCode());
+                        Console.WriteLine("Client has finished its current work: " + connectionSocket.GetHashCode());
                         Console.WriteLine(results.TotalsString);
                         Console.WriteLine(results.TimeString);
                     }

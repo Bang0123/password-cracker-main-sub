@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -11,80 +12,56 @@ namespace MasterCrack
 {
     public class Master
     {
+        public int Indexer { get; set; }
         public string DicPath { get; set; } = "webster-dictionary.txt";
+        public string FilePath { get; } = "passwords.txt";
+        public int Eport { get; } = 6789;
+        public int IncreaseIndex { get; set; } = 10000;
         public TcpListener MasterServer { get; set; }
         public IPEndPoint EndPoint { get; set; }
-
-        // TODO Use this list?
-        public List<TcpClient> ConnectClients { get; set; }
-
-        public List<FullUser> ResultsList
-        {
-            get
-            {
-                lock (Locker)
-                {
-                    return _resultsList;
-                }
-            }
-            set { _resultsList = value; }
-        }
-
-        public List<UserInfo> Workload
-        {
-            get
-            {
-                lock (Locker)
-                {
-                    return _workload;
-                }
-            }
-            set { _workload = value; }
-        }
-
-        public List<String> DictionaryList { get; set; }
-        public string FilePath { get; set; } = "passwords.txt";
-        public int Indexer { get; set; }
-        public object Locker = new object();
-        private List<UserInfo> _workload;
-        private List<FullUser> _resultsList;
-
+        public List<ConnectionHandler> ConnectClients { get; set; }
+        public List<string> DictionaryList { get; set; }
+        public Dictionary<string, FullUser> ResultsList { get; set; }
+        public Dictionary<string, UserInfo> Workload { get; set; }
+        public object Locker { get; set; } = new object();
         public Master()
         {
-            EndPoint = new IPEndPoint(IPAddress.Any, 6789);
+            EndPoint = new IPEndPoint(IPAddress.Any, Eport);
             MasterServer = new TcpListener(EndPoint);
-            ConnectClients = new List<TcpClient>();
-            ResultsList = new List<FullUser>();
+            ConnectClients = new List<ConnectionHandler>();
+            ResultsList = new Dictionary<string, FullUser>();
             Console.WriteLine("Server created");
             Indexer = 0;
         }
-
-        public List<String> GiveWorkLoad()
+        
+        public List<string> GiveWorkLoad()
         {
             lock (Locker)
             {
-                List<String> list = new List<string>();
-                for (int i = Indexer; i < Indexer + 10000 && i < DictionaryList.Count; i++)
+                List<string> list = new List<string>();
+                if (Indexer < DictionaryList.Count)
                 {
-                    list.Add(DictionaryList[i]);
+                    for (int i = Indexer; i < Indexer + IncreaseIndex && i < DictionaryList.Count; i++)
+                    {
+                        list.Add(DictionaryList[i]);
+                    }
+                    Indexer += IncreaseIndex;
+                    return list;
                 }
-                Indexer += 10000;
-                return list;
+                return null;
             }
-
         }
 
         public void Invoke()
         {
             MasterServer.Start();
-            Task.Run(() => { AcceptClients(); });
-            Console.WriteLine("Server socket started");
-            Console.WriteLine("Now accepting and handling is threaded");
             Console.WriteLine("Reading the password file");
             Workload = PrepareWorkload(FilePath);
             DictionaryList = PrepareDictionary(DicPath);
             Console.WriteLine("Dictionary completely loaded");
-
+            Task.Run(() => { AcceptClients(); });
+            Console.WriteLine("Server socket started");
+            
             LoopTillDone();
         }
 
@@ -92,11 +69,10 @@ namespace MasterCrack
         {
             while (true)
             {
-                if (Workload.Count < 1)
+                if (Workload.Count < 1 || DictionaryList.Count < Indexer)
                 {
                     TellClientsShutdown();
                     PrintResults();
-                    // TODO Jeg havde en ide, om at der skulle ske mere her, nu ved jeg ikke
                     // TODO kill thread factory process
                     break;
                 }
@@ -107,16 +83,13 @@ namespace MasterCrack
         {
             foreach (var result in ResultsList)
             {
-                Console.WriteLine(result.PrintUser());
+                Console.WriteLine(result.Value.PrintUser());
             }
         }
 
         private void TellClientsShutdown()
         {
-            foreach (var connectClient in ConnectClients)
-            {
-                connectClient.Close();
-            }
+            MasterServer.Stop();
         }
 
         private List<string> PrepareDictionary(string path)
@@ -132,9 +105,14 @@ namespace MasterCrack
             }
             return ls;
         }
-        private List<UserInfo> PrepareWorkload(string path)
+        private Dictionary<string, UserInfo> PrepareWorkload(string path)
         {
-            return PasswordFileHandler.ReadPasswordFile(path);
+            var pwList = PasswordFileHandler.ReadPasswordFile(path);
+            if (pwList == null || pwList.Count < 1)
+            {
+                return null;
+            }
+            return pwList.ToDictionary(userInfo => userInfo.Username);
         }
 
         public void AcceptClients()
@@ -144,16 +122,36 @@ namespace MasterCrack
                 var client = MasterServer.AcceptTcpClient();
                 if (client.Connected)
                 {
+                    var ch = new ConnectionHandler(client, this);
                     Task.Factory.StartNew(() =>
                     {
-                        var ch = new ConnectionHandler(client, this);
                         ch.HandleConnection();
                     });
-                    ConnectClients.Add(client);
+                    ConnectClients.Add(ch);
                     Console.WriteLine("Client added and is now awaiting work: " + client.GetHashCode());
                 }
             }
         }
 
+        public void ResultsCallback(CrackResults results)
+        {
+            lock (Locker)
+            {
+                if (results.Results.Count != 0)
+                {
+                    foreach (var user in results.Results)
+                    {
+                        if (!ResultsList.ContainsKey(user.Username))
+                        {
+                            ResultsList.Add(user.Username, user);
+                        }
+                        if (Workload.ContainsKey(user.Username))
+                        {
+                            Workload.Remove(user.Username);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

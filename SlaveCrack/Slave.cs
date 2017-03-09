@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using MasterCrack.Model;
 using MasterCrack.Util;
@@ -13,21 +14,28 @@ namespace SlaveCrack
 {
     public class Slave
     {
-        public TcpClient tcpClient { get; set; }
+        public TcpClient TcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
-        public string MastersIp { get; set; } = "192.168.1.8";
+        public string MastersIp { get; set; } = "127.0.0.1";
+        public int MastersPort { get; } = 6789;
         public IList<UserInfo> UserInfosList { get; set; }
-        public ICollection<string> DictionaryList { get; set; }
+        public IList<string> DictionaryList { get; set; }
+        public TimeSpan TimeElapsed { get; set; }
         public List<FullUser> Results { get; set; }
+
+        // TODO Slave skal være mere async i sine cracking handlinger og what not, flere crack metoder
+        public Slave()
+        {
+            HashAlgorithm = new SHA1CryptoServiceProvider();
+            //_messageDigest = new MD5CryptoServiceProvider();
+            TimeElapsed = TimeSpan.Zero;
+        }
         public void BeginWork()
         {
-            // TODO Sync errors
-            // TODO Test How to avoid double work
-            // TODO yea
             try
             {
-                TcpClient tcpClient = new TcpClient(MastersIp, 6789);
-                Stream stream = tcpClient.GetStream();
+                TcpClient = new TcpClient(MastersIp, MastersPort);
+                Stream stream = TcpClient.GetStream();
                 Results = new List<FullUser>();
                 StreamWriter sw = new StreamWriter(stream);
                 StreamReader sr = new StreamReader(stream);
@@ -39,7 +47,7 @@ namespace SlaveCrack
                 {
                     Console.WriteLine("Getting work to do");
                     DictionaryList = GetWorkStarted(sr, sw);
-                    if (DictionaryList != null || DictionaryList.Count != 0)
+                    if (DictionaryList != null && DictionaryList.Count > 0)
                     {
                         Stopwatch stopwatch = Stopwatch.StartNew();
                         foreach (var dictionaryEntry in DictionaryList)
@@ -47,10 +55,10 @@ namespace SlaveCrack
                             Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList));
                         }
                         stopwatch.Stop();
-                        //Console.WriteLine(string.Join(", ", Results));
-                        string total = $"Out of {UserInfosList.Count} password {Results.Count} was found ";
+                        string total = $"Theres {UserInfosList.Count} passwords left {Results.Count} was found ";
                         Console.WriteLine(total);
                         Console.WriteLine();
+                        TimeElapsed = TimeElapsed.Add(stopwatch.Elapsed);
                         string time = $"Time elapsed: {stopwatch.Elapsed}";
                         Console.WriteLine(time);
                         var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time);
@@ -60,7 +68,11 @@ namespace SlaveCrack
             }
             catch (Exception e)
             {
-                // TODO Handle the shutdown the server sends
+                if (e is ApplicationExitException)
+                {
+                    Console.WriteLine("Shutdown recieved");
+                    Console.WriteLine($"Time elapsed: {TimeElapsed.ToString("g")}");
+                }
                 Console.WriteLine(e);
             }
         }
@@ -71,8 +83,9 @@ namespace SlaveCrack
             sw.WriteLine(serializedobj);
             sw.WriteLine("EndOfFile");
             sw.Flush();
+            Results.Clear();
         }
-        private ICollection<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
+        private IList<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
         {
             sw.WriteLine("getdc");
             string receivedstring = "";
@@ -85,8 +98,18 @@ namespace SlaveCrack
                 }
                 receivedstring += incomingString;
             }
-            ICollection<string> list = JsonConvert.DeserializeObject<ICollection<string>>(receivedstring);
+            IList<string> list = JsonConvert.DeserializeObject<IList<string>>(receivedstring);
+            if (list.Count < 1)
+            {
+                CloseSlave();
+            }
             return list;
+        }
+
+        private void CloseSlave()
+        {
+            TcpClient.Close();
+            throw new ApplicationExitException("Server reached end of dictionary");
         }
 
         private IList<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
@@ -106,13 +129,6 @@ namespace SlaveCrack
             return list;
         }
 
-
-        public Slave()
-        {
-            HashAlgorithm = new SHA1CryptoServiceProvider();
-            //_messageDigest = new MD5CryptoServiceProvider();
-        }
-
         /// <summary>
         /// Generates a lot of variations, encrypts each of the and compares it to all entries in the password file
         /// </summary>
@@ -123,33 +139,33 @@ namespace SlaveCrack
         {
             List<FullUser> result = new List<FullUser>();
 
-            String possiblePassword = dictionaryEntry;
-            ICollection<FullUser> partialResult = CheckSingleWord(userInfos, possiblePassword);
+            string possiblePassword = dictionaryEntry;
+            IList<FullUser> partialResult = CheckSingleWord(userInfos, possiblePassword);
             result.AddRange(partialResult);
 
-            String possiblePasswordUpperCase = dictionaryEntry.ToUpper();
-            ICollection<FullUser> partialResultUpperCase = CheckSingleWord(userInfos, possiblePasswordUpperCase);
+            string possiblePasswordUpperCase = dictionaryEntry.ToUpper();
+            IList<FullUser> partialResultUpperCase = CheckSingleWord(userInfos, possiblePasswordUpperCase);
             result.AddRange(partialResultUpperCase);
 
-            String possiblePasswordCapitalized = StringUtilities.Capitalize(dictionaryEntry);
-            ICollection<FullUser> partialResultCapitalized = CheckSingleWord(userInfos, possiblePasswordCapitalized);
+            string possiblePasswordCapitalized = StringUtilities.Capitalize(dictionaryEntry);
+            IList<FullUser> partialResultCapitalized = CheckSingleWord(userInfos, possiblePasswordCapitalized);
             result.AddRange(partialResultCapitalized);
 
-            String possiblePasswordReverse = StringUtilities.Reverse(dictionaryEntry);
-            ICollection<FullUser> partialResultReverse = CheckSingleWord(userInfos, possiblePasswordReverse);
+            string possiblePasswordReverse = StringUtilities.Reverse(dictionaryEntry);
+            IList<FullUser> partialResultReverse = CheckSingleWord(userInfos, possiblePasswordReverse);
             result.AddRange(partialResultReverse);
 
             for (int i = 0; i < 100; i++)
             {
-                String possiblePasswordEndDigit = dictionaryEntry + i;
-                ICollection<FullUser> partialResultEndDigit = CheckSingleWord(userInfos, possiblePasswordEndDigit);
+                string possiblePasswordEndDigit = dictionaryEntry + i;
+                IList<FullUser> partialResultEndDigit = CheckSingleWord(userInfos, possiblePasswordEndDigit);
                 result.AddRange(partialResultEndDigit);
             }
 
             for (int i = 0; i < 100; i++)
             {
-                String possiblePasswordStartDigit = i + dictionaryEntry;
-                ICollection<FullUser> partialResultStartDigit = CheckSingleWord(userInfos, possiblePasswordStartDigit);
+                string possiblePasswordStartDigit = i + dictionaryEntry;
+                IList<FullUser> partialResultStartDigit = CheckSingleWord(userInfos, possiblePasswordStartDigit);
                 result.AddRange(partialResultStartDigit);
             }
 
@@ -157,8 +173,8 @@ namespace SlaveCrack
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    String possiblePasswordStartEndDigit = i + dictionaryEntry + j;
-                    ICollection<FullUser> partialResultStartEndDigit = CheckSingleWord(userInfos, possiblePasswordStartEndDigit);
+                    string possiblePasswordStartEndDigit = i + dictionaryEntry + j;
+                    IList<FullUser> partialResultStartEndDigit = CheckSingleWord(userInfos, possiblePasswordStartEndDigit);
                     result.AddRange(partialResultStartEndDigit);
                 }
             }
@@ -172,7 +188,7 @@ namespace SlaveCrack
         /// <param name="userInfos"></param>
         /// <param name="possiblePassword">List of (username, encrypted password) pairs from the password file</param>
         /// <returns>A list of (username, readable password) pairs. The list might be empty</returns>
-        private ICollection<FullUser> CheckSingleWord(IList<UserInfo> userInfos, string possiblePassword)
+        private IList<FullUser> CheckSingleWord(IList<UserInfo> userInfos, string possiblePassword)
         {
             char[] charArray = possiblePassword.ToCharArray();
             byte[] passwordAsBytes = Array.ConvertAll(charArray, PasswordFileHandler.GetConverter());
