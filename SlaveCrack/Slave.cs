@@ -28,7 +28,8 @@ namespace SlaveCrack
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
             //_messageDigest = new MD5CryptoServiceProvider();
-            TimeElapsed = TimeSpan.Zero;
+            //TimeElapsed = TimeSpan.Zero;
+            Results = new List<FullUser>();
         }
         public void BeginWork()
         {
@@ -36,7 +37,6 @@ namespace SlaveCrack
             {
                 TcpClient = new TcpClient(MastersIp, MastersPort);
                 Stream stream = TcpClient.GetStream();
-                Results = new List<FullUser>();
                 StreamWriter sw = new StreamWriter(stream);
                 StreamReader sr = new StreamReader(stream);
                 sw.AutoFlush = true;
@@ -71,7 +71,7 @@ namespace SlaveCrack
                 if (e is ApplicationExitException)
                 {
                     Console.WriteLine("Shutdown recieved");
-                    Console.WriteLine($"Time elapsed: {TimeElapsed.ToString("g")}");
+                    //Console.WriteLine($"Time elapsed: {TimeElapsed.ToString("g")}");
                 }
                 Console.WriteLine(e);
             }
@@ -98,7 +98,7 @@ namespace SlaveCrack
                 }
                 receivedstring += incomingString;
             }
-            IList<string> list = JsonConvert.DeserializeObject<IList<string>>(receivedstring);
+            IList<string> list = JsonConvert.DeserializeObject<List<string>>(receivedstring);
             if (list.Count < 1)
             {
                 CloseSlave();
@@ -125,7 +125,7 @@ namespace SlaveCrack
                 }
                 receivedstring += incomingString;
             }
-            IList<UserInfo> list = JsonConvert.DeserializeObject<IList<UserInfo>>(receivedstring);
+            IList<UserInfo> list = JsonConvert.DeserializeObject<List<UserInfo>>(receivedstring);
             return list;
         }
 
@@ -198,7 +198,7 @@ namespace SlaveCrack
             List<FullUser> results = new List<FullUser>();
             foreach (UserInfo userInfo in userInfos)
             {
-                if (PasswordUtils.CompareBytes(userInfo.EntryptedPassword, encryptedPassword))
+                if (CompareBytes(userInfo.EntryptedPassword, encryptedPassword))
                 {
                     results.Add(new FullUser(userInfo, possiblePassword));
 
@@ -219,6 +219,33 @@ namespace SlaveCrack
                 }
             }
             return results;
+        }
+        /// <summary>
+        /// Compares to byte arrays. Encrypted words are byte arrays
+        /// </summary>
+        /// <param name="firstArray"></param>
+        /// <param name="secondArray"></param>
+        /// <returns></returns>
+        public static bool CompareBytes(IList<byte> firstArray, IList<byte> secondArray)
+        {
+            //if (secondArray == null)
+            //{
+            //    throw new ArgumentNullException("firstArray");
+            //}
+            //if (secondArray == null)
+            //{
+            //    throw new ArgumentNullException("secondArray");
+            //}
+            if (firstArray.Count != secondArray.Count)
+            {
+                return false;
+            }
+            for (int i = 0; i < firstArray.Count; i++)
+            {
+                if (firstArray[i] != secondArray[i])
+                    return false;
+            }
+            return true;
         }
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using MasterCrack.Model;
 using MasterCrack.Util;
@@ -76,6 +77,7 @@ namespace MasterCrack
                     // TODO kill thread factory process
                     break;
                 }
+                Thread.Sleep(100);
             }
         }
 

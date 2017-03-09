@@ -16,7 +16,7 @@ namespace MasterCrack
     public class ConnectionHandler
     {
         public Master MyMaster { get; set; }
-        private bool Workload;
+        private bool _workload;
         private TcpClient connectionSocket;
 
 
@@ -44,7 +44,7 @@ namespace MasterCrack
                 {
                     if (message.StartsWith("getpw"))
                     {
-                        string passWordS = JsonConvert.SerializeObject(MyMaster.Workload.ToList());
+                        string passWordS = JsonConvert.SerializeObject(MyMaster.Workload.Select(kvp => kvp.Value).ToList());
                         sw.WriteLine(passWordS);
                         sw.WriteLine("EndOfFile");
                     }
@@ -53,9 +53,9 @@ namespace MasterCrack
                         string listString = JsonConvert.SerializeObject(MyMaster.GiveWorkLoad());
                         sw.WriteLine(listString);
                         sw.WriteLine("EndOfFile");
-                        Workload = true;
+                        _workload = true;
                     }
-                    if (Workload)
+                    if (_workload)
                     {
                         string receivedstring = "";
                         while (true)
@@ -68,7 +68,7 @@ namespace MasterCrack
                             receivedstring += incomingString;
                         }
                         CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
-                        Workload = false;
+                        _workload = false;
 
                         MyMaster.ResultsCallback(results);
 
