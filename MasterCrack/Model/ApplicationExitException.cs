@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace MasterCrack
+namespace MasterCrack.Model
 {
     [Serializable]
-    internal class ApplicationExitException : Exception
+    public class ApplicationExitException : Exception
     {
         public ApplicationExitException()
         {
