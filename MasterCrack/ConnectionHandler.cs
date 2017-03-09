@@ -18,7 +18,7 @@ namespace MasterCrack
         public Master MyMaster { get; set; }
         private bool Workload;
         private TcpClient connectionSocket;
-        
+
 
         public ConnectionHandler(TcpClient tcpClient)
         {
@@ -70,22 +70,26 @@ namespace MasterCrack
                         CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
                         Workload = false;
                         MyMaster.ResultsList.AddRange(results.Results);
-                        
-                        foreach (var resultsResult in results.Results)
+
+                        if (results.Results.Count != 0)
                         {
-                            foreach (var userInfo in MyMaster.Workload)
+                            foreach (var resultsResult in results.Results)
                             {
-                                if (resultsResult.Username == userInfo.Username)
+                                for (int i = 0; i < MyMaster.Workload.Count; i++)
                                 {
-                                    MyMaster.Workload.Remove(userInfo);
+                                    if (resultsResult.Username == MyMaster.Workload[i].Username)
+                                    {
+                                        MyMaster.Workload.Remove(MyMaster.Workload[i]);
+                                    }
                                 }
+
                             }
                         }
                         Console.WriteLine("this client finito: " + connectionSocket.GetHashCode());
                         Console.WriteLine(results.TotalsString);
                         Console.WriteLine(results.TimeString);
                     }
-                    
+
                     message = sr.ReadLine();
                     Console.WriteLine("Client: " + message);
                 }

@@ -16,7 +16,7 @@ namespace SlaveCrack
         public TcpClient tcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
         public string MastersIp { get; set; } = "192.168.1.8";
-        public ICollection<UserInfo> UserInfosList { get; set; }
+        public IList<UserInfo> UserInfosList { get; set; }
         public ICollection<string> DictionaryList { get; set; }
         public List<FullUser> Results { get; set; }
         public void BeginWork()
@@ -89,7 +89,7 @@ namespace SlaveCrack
             return list;
         }
 
-        private ICollection<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
+        private IList<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
         {
             string receivedstring = "";
             sw.WriteLine("getpw");
@@ -102,7 +102,7 @@ namespace SlaveCrack
                 }
                 receivedstring += incomingString;
             }
-            ICollection<UserInfo> list = JsonConvert.DeserializeObject<ICollection<UserInfo>>(receivedstring);
+            IList<UserInfo> list = JsonConvert.DeserializeObject<IList<UserInfo>>(receivedstring);
             return list;
         }
 
@@ -119,7 +119,7 @@ namespace SlaveCrack
         /// <param name="dictionaryEntry">A single word from the dictionary</param>
         /// <param name="userInfos">List of (username, encrypted password) pairs from the password file</param>
         /// <returns>A list of (username, readable password) pairs. The list might be empty</returns>
-        private ICollection<FullUser> CheckWordWithVariations(string dictionaryEntry, ICollection<UserInfo> userInfos)
+        private ICollection<FullUser> CheckWordWithVariations(string dictionaryEntry, IList<UserInfo> userInfos)
         {
             List<FullUser> result = new List<FullUser>();
 
@@ -172,7 +172,7 @@ namespace SlaveCrack
         /// <param name="userInfos"></param>
         /// <param name="possiblePassword">List of (username, encrypted password) pairs from the password file</param>
         /// <returns>A list of (username, readable password) pairs. The list might be empty</returns>
-        private ICollection<FullUser> CheckSingleWord(ICollection<UserInfo> userInfos, string possiblePassword)
+        private ICollection<FullUser> CheckSingleWord(IList<UserInfo> userInfos, string possiblePassword)
         {
             char[] charArray = possiblePassword.ToCharArray();
             byte[] passwordAsBytes = Array.ConvertAll(charArray, PasswordFileHandler.GetConverter());
@@ -185,8 +185,21 @@ namespace SlaveCrack
                 if (PasswordUtils.CompareBytes(userInfo.EntryptedPassword, encryptedPassword))
                 {
                     results.Add(new FullUser(userInfo, possiblePassword));
-                    userInfos.Remove(userInfo);
+
                     Console.WriteLine(userInfo.Username + " " + possiblePassword);
+                }
+            }
+            if (results.Count != 0)
+            {
+                foreach (var fullUser in results)
+                {
+                    for(int i = 0; i < userInfos.Count; i++)
+                    {
+                        if (fullUser.Username == userInfos[i].Username)
+                        {
+                            userInfos.Remove(userInfos[i]);
+                        }
+                    }
                 }
             }
             return results;

@@ -64,11 +64,11 @@ namespace MasterCrack
             lock (Locker)
             {
                 List<String> list = new List<string>();
-                for (int i = Indexer; i < Indexer + 1000 && i < DictionaryList.Count; i++)
+                for (int i = Indexer; i < Indexer + 10000 && i < DictionaryList.Count; i++)
                 {
                     list.Add(DictionaryList[i]);
                 }
-                Indexer += 1000;
+                Indexer += 10000;
                 return list;
             }
 
