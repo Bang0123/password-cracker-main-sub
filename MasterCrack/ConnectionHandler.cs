@@ -1,13 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 using MasterCrack.Model;
 using Newtonsoft.Json;
 
@@ -50,7 +44,7 @@ namespace MasterCrack
                     }
                     if (message.StartsWith("getdc"))
                     {
-                        string listString = JsonConvert.SerializeObject(MyMaster.GiveWorkLoad());
+                        string listString = JsonConvert.SerializeObject(MyMaster.GetWorkLoadCallback());
                         sw.WriteLine(listString);
                         sw.WriteLine("EndOfFile");
                         _workload = true;
