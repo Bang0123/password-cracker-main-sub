@@ -94,7 +94,7 @@ namespace MasterCrack
                     TellClientsShutdown();
                     break;
                 }
-                Thread.Sleep(100);
+                Thread.Sleep(250);
             }
         }
 
@@ -188,12 +188,12 @@ namespace MasterCrack
         {
             lock (Locker)
             {
+                Hashestried += results.Hashes;
+                ClientsWorkTimeSpan = ClientsWorkTimeSpan.Add(results.TimeElapsed);
                 if (results.Results.Count < 1)
                 {
                     return;
                 }
-                Hashestried += results.Hashes;
-                ClientsWorkTimeSpan = ClientsWorkTimeSpan.Add(results.TimeElapsed);
                 foreach (var user in results.Results)
                 {
                     if (!ResultsList.ContainsKey(user.Username))
