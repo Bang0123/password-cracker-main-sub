@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace MasterCrack
 {
-    public class ConnectionHandler
+    public class ConnectionHandler : IDisposable
     {
         public Master MyMaster { get; set; }
         private bool _workload;
@@ -55,6 +55,10 @@ namespace MasterCrack
                         while (true)
                         {
                             string incomingString = sr.ReadLine();
+                            if (incomingString == "EndOfDictionary")
+                            {
+                                throw new ApplicationExitException("End of dicitonary reached");
+                            }
                             if (incomingString == "EndOfFile")
                             {
                                 break;
@@ -72,15 +76,28 @@ namespace MasterCrack
                     }
 
                     message = sr.ReadLine();
-                    Console.WriteLine("Client: " + message);
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                Console.WriteLine("Client DC: " + this.GetHashCode());
+                Console.WriteLine("Client DC: " + connectionSocket.GetHashCode());
+                if (e is ApplicationExitException)
+                {
+                    MyMaster.ShutdownCallback(this);
+                }
             }
             ns.Close();
             connectionSocket.Close();
+        }
+
+        public bool IsWorking()
+        {
+            return _workload;
+        }
+
+        public void Dispose()
+        {
+            ((IDisposable) connectionSocket)?.Dispose();
         }
     }
 }

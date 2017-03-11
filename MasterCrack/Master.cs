@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,17 +15,23 @@ namespace MasterCrack
     public class Master
     {
         public int Indexer { get; set; }
-        public string DicPath { get; } = "webster-dictionary.txt";
+        public string[] DicPath { get; } = { "webster-dictionary.txt", "webster-dictionary-reduced.txt" };
         public string FilePath { get; } = "passwords.txt";
         public int Eport { get; } = 6789;
-        public int IncreaseIndex { get; } = 10000;
+        public int IncreaseIndex { get; set; } = 10000;
         public TcpListener MasterServer { get; }
         public IPEndPoint EndPoint { get; }
         public List<ConnectionHandler> ConnectClients { get; }
         public List<string> DictionaryList { get; set; }
         public Dictionary<string, FullUser> ResultsList { get; }
-        public Dictionary<string, UserInfo> Workload { get; set; }
+        public Dictionary<string, UserInfo> Workload { get; private set; }
         public object Locker { get; } = new object();
+        public Stopwatch TotalTimeWatch { get; set; }
+        public TimeSpan ClientsWorkTimeSpan { get; set; }
+        public int Hashestried { get; set; }
+        public bool DoneBool { get; set; }
+        public bool EndOfDictionary { get; set; }
+
         public Master()
         {
             EndPoint = new IPEndPoint(IPAddress.Any, Eport);
@@ -32,13 +39,19 @@ namespace MasterCrack
             ConnectClients = new List<ConnectionHandler>();
             ResultsList = new Dictionary<string, FullUser>();
             Console.WriteLine("Server created");
+            ClientsWorkTimeSpan = TimeSpan.Zero;
             Indexer = 0;
+            Hashestried = 0;
         }
 
         public List<string> GetWorkLoadCallback()
         {
             lock (Locker)
             {
+                if (EndOfDictionary)
+                {
+                    return null;
+                }
                 List<string> list = new List<string>();
                 if (Indexer < DictionaryList.Count)
                 {
@@ -55,10 +68,12 @@ namespace MasterCrack
 
         public void Invoke()
         {
+            TotalTimeWatch = Stopwatch.StartNew();
             MasterServer.Start();
             Console.WriteLine("Reading the password file");
-            Workload = PrepareWorkload(FilePath);
-            DictionaryList = PrepareDictionary(DicPath);
+            Workload = PreparePasswords(FilePath);
+            // TODO More dictionaries?
+            DictionaryList = PrepareDictionary(DicPath[0]);
             Console.WriteLine("Dictionary completely loaded");
             Task.Run(() => { AcceptClients(); });
             Console.WriteLine("Server socket started");
@@ -70,15 +85,22 @@ namespace MasterCrack
         {
             while (true)
             {
-                if (Workload.Count < 1 || DictionaryList.Count < Indexer)
+                Console.Clear();
+                PrintResults();
+                if (IsDone())
                 {
-                    TellClientsShutdown();
+                    TotalTimeWatch.Stop();
                     PrintResults();
-                    // TODO kill thread factory process
+                    TellClientsShutdown();
                     break;
                 }
                 Thread.Sleep(100);
             }
+        }
+
+        private bool IsDone()
+        {
+            return DoneBool;
         }
 
         private void PrintResults()
@@ -87,10 +109,24 @@ namespace MasterCrack
             {
                 Console.WriteLine(result.Value.PrintUser());
             }
+            PrintTimeElapsed();
+        }
+
+        private void PrintTimeElapsed()
+        {
+            Console.WriteLine("Total time used by clients added together: " + ClientsWorkTimeSpan);
+            Console.WriteLine("Total time Elapsed: " + TotalTimeWatch?.Elapsed);
         }
 
         private void TellClientsShutdown()
         {
+            foreach (var ch in ConnectClients)
+            {
+                if (!ch.IsWorking())
+                {
+                    ch.Dispose();
+                }
+            }
             MasterServer.Stop();
         }
 
@@ -104,10 +140,14 @@ namespace MasterCrack
                 {
                     ls.Add(dictionary.ReadLine());
                 }
+                if (ls.Count < 10000)
+                {
+                    IncreaseIndex = 1000;
+                }
             }
             return ls;
         }
-        private static Dictionary<string, UserInfo> PrepareWorkload(string path)
+        private Dictionary<string, UserInfo> PreparePasswords(string path)
         {
             var pwList = PasswordFileHandler.ReadPasswordFile(path);
             if (pwList == null || pwList.Count < 1)
@@ -119,19 +159,27 @@ namespace MasterCrack
 
         private void AcceptClients()
         {
-            while (true)
+            while (!IsDone())
             {
-                var client = MasterServer.AcceptTcpClient();
-                if (client.Connected)
+                try
                 {
-                    var ch = new ConnectionHandler(client, this);
-                    Task.Factory.StartNew(() =>
+                    var client = MasterServer.AcceptTcpClient();
+                    if (client.Connected)
                     {
-                        ch.HandleConnection();
-                    });
-                    ConnectClients.Add(ch);
-                    Console.WriteLine("Client added and is now awaiting work: " + client.GetHashCode());
+                        var ch = new ConnectionHandler(client, this);
+                        Task.Factory.StartNew(() =>
+                        {
+                            ch.HandleConnection();
+                        });
+                        ConnectClients.Add(ch);
+                        Console.WriteLine("Client added and is now awaiting work: " + client.GetHashCode());
+                    }
                 }
+                catch (Exception)
+                {
+                    Console.WriteLine("Reached the end of dictionary");
+                }
+
             }
         }
 
@@ -141,8 +189,10 @@ namespace MasterCrack
             {
                 if (results.Results.Count < 1)
                 {
-                    return; 
+                    return;
                 }
+                Hashestried += results.Hashes;
+                ClientsWorkTimeSpan = ClientsWorkTimeSpan.Add(results.TimeElapsed);
                 foreach (var user in results.Results)
                 {
                     if (!ResultsList.ContainsKey(user.Username))
@@ -157,5 +207,22 @@ namespace MasterCrack
             }
         }
 
-    } 
+        public void ShutdownCallback(ConnectionHandler caller)
+        {
+            lock (Locker)
+            {
+                if (DoneBool)
+                {
+                    return;
+                }
+                EndOfDictionary = true;
+                ConnectClients.Remove(caller);
+                if (ConnectClients.Count == 0)
+                {
+                    DoneBool = true;
+                }
+            }
+
+        }
+    }
 }

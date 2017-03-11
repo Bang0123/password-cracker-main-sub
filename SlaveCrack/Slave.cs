@@ -6,12 +6,17 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
+using System.Threading;
 using MasterCrack.Model;
 using MasterCrack.Util;
 using Newtonsoft.Json;
 
 namespace SlaveCrack
 {
+
+    /// <summary>
+    /// Only the master keeps the results ;)
+    /// </summary>
     public class Slave
     {
         public TcpClient TcpClient { get; set; }
@@ -31,6 +36,7 @@ namespace SlaveCrack
             //TimeElapsed = TimeSpan.Zero;
             Results = new List<FullUser>();
         }
+
         public void BeginWork()
         {
             try
@@ -47,12 +53,21 @@ namespace SlaveCrack
                 {
                     Console.WriteLine("Getting work to do");
                     DictionaryList = GetWorkStarted(sr, sw);
+                    if (DictionaryList == null || DictionaryList.Count < 1)
+                    {
+                        sw.WriteLine("EndOfDictionary");
+                        sw.Flush();
+                        Thread.Sleep(100);
+                        throw new ApplicationExitException("Server reached end of dictionary");
+                    }
                     if (DictionaryList != null && DictionaryList.Count > 0)
                     {
+                        Console.WriteLine("Working!");
                         Stopwatch stopwatch = Stopwatch.StartNew();
+                        var hashes = 0;
                         foreach (var dictionaryEntry in DictionaryList)
                         {
-                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList));
+                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList, ref hashes));
                         }
                         stopwatch.Stop();
                         string total = $"Theres {UserInfosList.Count} passwords left {Results.Count} was found ";
@@ -61,7 +76,7 @@ namespace SlaveCrack
                         TimeElapsed = TimeElapsed.Add(stopwatch.Elapsed);
                         string time = $"Time elapsed: {stopwatch.Elapsed}";
                         Console.WriteLine(time);
-                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time);
+                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time , hashes);
                         SendResult(sw, resultObject);
                     }
                 }
@@ -71,10 +86,15 @@ namespace SlaveCrack
                 if (e is ApplicationExitException)
                 {
                     Console.WriteLine("Shutdown recieved");
-                    //Console.WriteLine($"Time elapsed: {TimeElapsed.ToString("g")}");
+                    Console.WriteLine("Total time slave was working on passwords: " + TimeElapsed);
+                    TcpClient.Close();
                 }
-                Console.WriteLine(e);
+                else
+                {
+                    Console.WriteLine(e);
+                }
             }
+            
         }
 
         private void SendResult(StreamWriter sw, CrackResults cr)
@@ -99,17 +119,7 @@ namespace SlaveCrack
                 receivedstring += incomingString;
             }
             IList<string> list = JsonConvert.DeserializeObject<List<string>>(receivedstring);
-            if (list.Count < 1)
-            {
-                CloseSlave();
-            }
             return list;
-        }
-
-        private void CloseSlave()
-        {
-            TcpClient.Close();
-            throw new ApplicationExitException("Server reached end of dictionary");
         }
 
         private IList<UserInfo> GetPasswords(StreamReader sr, StreamWriter sw)
@@ -134,38 +144,39 @@ namespace SlaveCrack
         /// </summary>
         /// <param name="dictionaryEntry">A single word from the dictionary</param>
         /// <param name="userInfos">List of (username, encrypted password) pairs from the password file</param>
+        /// <param name="hashes">passed by ref to change the value</param>
         /// <returns>A list of (username, readable password) pairs. The list might be empty</returns>
-        private ICollection<FullUser> CheckWordWithVariations(string dictionaryEntry, IList<UserInfo> userInfos)
+        private ICollection<FullUser> CheckWordWithVariations(string dictionaryEntry, IList<UserInfo> userInfos, ref int hashes)
         {
             List<FullUser> result = new List<FullUser>();
 
             string possiblePassword = dictionaryEntry;
-            IList<FullUser> partialResult = CheckSingleWord(userInfos, possiblePassword);
+            IList<FullUser> partialResult = CheckSingleWord(userInfos, possiblePassword, ref hashes);
             result.AddRange(partialResult);
 
             string possiblePasswordUpperCase = dictionaryEntry.ToUpper();
-            IList<FullUser> partialResultUpperCase = CheckSingleWord(userInfos, possiblePasswordUpperCase);
+            IList<FullUser> partialResultUpperCase = CheckSingleWord(userInfos, possiblePasswordUpperCase, ref hashes);
             result.AddRange(partialResultUpperCase);
 
             string possiblePasswordCapitalized = StringUtilities.Capitalize(dictionaryEntry);
-            IList<FullUser> partialResultCapitalized = CheckSingleWord(userInfos, possiblePasswordCapitalized);
+            IList<FullUser> partialResultCapitalized = CheckSingleWord(userInfos, possiblePasswordCapitalized, ref hashes);
             result.AddRange(partialResultCapitalized);
 
             string possiblePasswordReverse = StringUtilities.Reverse(dictionaryEntry);
-            IList<FullUser> partialResultReverse = CheckSingleWord(userInfos, possiblePasswordReverse);
+            IList<FullUser> partialResultReverse = CheckSingleWord(userInfos, possiblePasswordReverse, ref hashes);
             result.AddRange(partialResultReverse);
 
             for (int i = 0; i < 100; i++)
             {
                 string possiblePasswordEndDigit = dictionaryEntry + i;
-                IList<FullUser> partialResultEndDigit = CheckSingleWord(userInfos, possiblePasswordEndDigit);
+                IList<FullUser> partialResultEndDigit = CheckSingleWord(userInfos, possiblePasswordEndDigit, ref hashes);
                 result.AddRange(partialResultEndDigit);
             }
 
             for (int i = 0; i < 100; i++)
             {
                 string possiblePasswordStartDigit = i + dictionaryEntry;
-                IList<FullUser> partialResultStartDigit = CheckSingleWord(userInfos, possiblePasswordStartDigit);
+                IList<FullUser> partialResultStartDigit = CheckSingleWord(userInfos, possiblePasswordStartDigit, ref hashes);
                 result.AddRange(partialResultStartDigit);
             }
 
@@ -174,7 +185,7 @@ namespace SlaveCrack
                 for (int j = 0; j < 10; j++)
                 {
                     string possiblePasswordStartEndDigit = i + dictionaryEntry + j;
-                    IList<FullUser> partialResultStartEndDigit = CheckSingleWord(userInfos, possiblePasswordStartEndDigit);
+                    IList<FullUser> partialResultStartEndDigit = CheckSingleWord(userInfos, possiblePasswordStartEndDigit, ref hashes);
                     result.AddRange(partialResultStartEndDigit);
                 }
             }
@@ -187,12 +198,14 @@ namespace SlaveCrack
         /// </summary>
         /// <param name="userInfos"></param>
         /// <param name="possiblePassword">List of (username, encrypted password) pairs from the password file</param>
+        /// <param name="hashes">Passed by ref to change the value</param>
         /// <returns>A list of (username, readable password) pairs. The list might be empty</returns>
-        private IList<FullUser> CheckSingleWord(IList<UserInfo> userInfos, string possiblePassword)
+        private IList<FullUser> CheckSingleWord(IList<UserInfo> userInfos, string possiblePassword, ref int hashes)
         {
             char[] charArray = possiblePassword.ToCharArray();
             byte[] passwordAsBytes = Array.ConvertAll(charArray, PasswordFileHandler.GetConverter());
             byte[] encryptedPassword = HashAlgorithm.ComputeHash(passwordAsBytes);
+            hashes++;
             //string encryptedPasswordBase64 = System.Convert.ToBase64String(encryptedPassword);
 
             List<FullUser> results = new List<FullUser>();
@@ -201,15 +214,20 @@ namespace SlaveCrack
                 if (CompareBytes(userInfo.EntryptedPassword, encryptedPassword))
                 {
                     results.Add(new FullUser(userInfo, possiblePassword));
-
                     Console.WriteLine(userInfo.Username + " " + possiblePassword);
                 }
             }
+            FilterWhatsDone(userInfos, results);
+            return results;
+        }
+
+        private void FilterWhatsDone(IList<UserInfo> userInfos, List<FullUser> results)
+        {
             if (results.Count != 0)
             {
                 foreach (var fullUser in results)
                 {
-                    for(int i = 0; i < userInfos.Count; i++)
+                    for (int i = 0; i < userInfos.Count; i++)
                     {
                         if (fullUser.Username == userInfos[i].Username)
                         {
@@ -218,8 +236,8 @@ namespace SlaveCrack
                     }
                 }
             }
-            return results;
         }
+
         /// <summary>
         /// Compares to byte arrays. Encrypted words are byte arrays
         /// </summary>
