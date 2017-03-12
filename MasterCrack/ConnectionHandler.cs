@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using MasterCrack.Model;
 using Newtonsoft.Json;
 
@@ -68,7 +69,8 @@ namespace MasterCrack
                         CrackResults results = JsonConvert.DeserializeObject<CrackResults>(receivedstring);
                         _workload = false;
 
-                        MyMaster.ResultsCallback(results);
+                        
+                        Task.Run(()=> MyMaster.ResultsCallback(results));
 
                         Console.WriteLine("Client has finished its current work: " + connectionSocket.GetHashCode());
                         Console.WriteLine(results.TotalsString);
