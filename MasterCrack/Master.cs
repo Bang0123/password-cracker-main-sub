@@ -115,7 +115,7 @@ namespace MasterCrack
         private void PrintTimeElapsed()
         {
             Console.WriteLine("Hashes computed and tried: " + Hashestried);
-            Console.WriteLine("Total time used by clients added together: " + ClientsWorkTimeSpan);
+            Console.WriteLine("Total time used by clients added alltogether: " + ClientsWorkTimeSpan);
             Console.WriteLine("Total time Elapsed: " + TotalTimeWatch?.Elapsed);
         }
 

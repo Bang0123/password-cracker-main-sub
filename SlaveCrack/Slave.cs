@@ -28,12 +28,11 @@ namespace SlaveCrack
         public TimeSpan TimeElapsed { get; set; }
         public List<FullUser> Results { get; set; }
 
-        // TODO Slave skal være mere async i sine cracking handlinger og what not, flere crack metoder
+        // TODO Slave kan blive mere async i sine cracking handlinger og what not
         public Slave()
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
             //_messageDigest = new MD5CryptoServiceProvider();
-            //TimeElapsed = TimeSpan.Zero;
             Results = new List<FullUser>();
         }
 
