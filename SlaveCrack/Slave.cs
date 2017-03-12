@@ -69,7 +69,7 @@ namespace SlaveCrack
                             Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList, ref hashes));
                         }
                         stopwatch.Stop();
-                        string total = $"Theres {UserInfosList.Count} passwords left {Results.Count} was found ";
+                        string total = $"Theres {UserInfosList.Count} passwords left\n{Results.Count} passwords was found\n{DictionaryList.Count} words was tested";
                         Console.WriteLine(total);
                         Console.WriteLine();
                         TimeElapsed = TimeElapsed.Add(stopwatch.Elapsed);
