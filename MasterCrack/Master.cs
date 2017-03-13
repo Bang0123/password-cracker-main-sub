@@ -25,7 +25,11 @@ namespace MasterCrack
         public List<string> DictionaryList { get; set; }
         public Dictionary<string, FullUser> ResultsList { get; }
         public Dictionary<string, UserInfo> Workload { get; private set; }
-        public object Locker { get; } = new object();
+
+        // Do multiple locker objects help out not locking up the work?
+        public object WorkloadLocker { get; } = new object();
+        public object ResultsLocker { get; } = new object();
+        public object ShutdownLocker { get; } = new object();
         public Stopwatch TotalTimeWatch { get; set; }
         public TimeSpan ClientsWorkTimeSpan { get; set; }
         public int Hashestried { get; set; }
@@ -46,7 +50,7 @@ namespace MasterCrack
 
         public List<string> GetWorkLoadCallback()
         {
-            lock (Locker)
+            lock (WorkloadLocker)
             {
                 if (EndOfDictionary)
                 {
@@ -89,6 +93,7 @@ namespace MasterCrack
                 PrintResults();
                 if (IsDone())
                 {
+                    Console.Clear();
                     TotalTimeWatch.Stop();
                     PrintResults();
                     TellClientsShutdown();
@@ -186,7 +191,7 @@ namespace MasterCrack
 
         public void ResultsCallback(CrackResults results)
         {
-            lock (Locker)
+            lock (ResultsLocker)
             {
                 Hashestried += results.Hashes;
                 ClientsWorkTimeSpan = ClientsWorkTimeSpan.Add(results.TimeElapsed);
@@ -210,7 +215,7 @@ namespace MasterCrack
 
         public void ShutdownCallback(ConnectionHandler caller)
         {
-            lock (Locker)
+            lock (ShutdownLocker)
             {
                 if (DoneBool)
                 {
