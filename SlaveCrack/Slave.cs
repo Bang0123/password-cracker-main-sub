@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 using MasterCrack.Model;
 using MasterCrack.Util;
 using Newtonsoft.Json;
@@ -25,7 +27,7 @@ namespace SlaveCrack
         //public string MastersIp { get; set; } = "192.168.1.8";
         public int MastersPort { get; } = 6789;
         public IList<UserInfo> UserInfosList { get; set; }
-        public IList<string> DictionaryList { get; set; }
+        public List<string> DictionaryList { get; set; }
         public TimeSpan TimeElapsed { get; set; }
         public List<FullUser> Results { get; set; }
 
@@ -64,10 +66,34 @@ namespace SlaveCrack
                     {
                         Console.WriteLine("Working!");
                         Stopwatch stopwatch = Stopwatch.StartNew();
-                        var hashes = 0;
+                        int[] hashes = {0};
+                        // TODO Split up and mak use of more threads
+                        //var numOfThreads = Environment.ProcessorCount;
+                        //var split = DictionaryList.Count / numOfThreads;
+                        //var indexer = 0;
+                        //for (int i = 0; i < numOfThreads; i++)
+                        //{
+                        //    if (split < indexer || indexer > DictionaryList.Count || split > DictionaryList.Count)
+                        //    {
+
+                        //    }
+                        //    List<string> newList = DictionaryList.GetRange(indexer, split);
+
+                        //    Task.Run(() =>
+                        //    {
+                        //        foreach (var word in newList)
+                        //        {
+                        //            Results.AddRange(CheckWordWithVariations(word, UserInfosList, ref hashes[0]));
+                        //        }
+                        //    });
+                        //    indexer += split;
+                        //    split += split;
+                        //http://stackoverflow.com/questions/11463734/split-a-list-into-smaller-lists-of-n-size
+                        //}http://stackoverflow.com/questions/419019/split-list-into-sublists-with-linq
+                        //Task.WaitAll();
                         foreach (var dictionaryEntry in DictionaryList)
                         {
-                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList, ref hashes));
+                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList, ref hashes[0]));
                         }
                         stopwatch.Stop();
                         string total = $"Theres {UserInfosList.Count} passwords left\n{Results.Count} passwords was found\n{DictionaryList.Count} words was tested";
@@ -76,7 +102,7 @@ namespace SlaveCrack
                         TimeElapsed = TimeElapsed.Add(stopwatch.Elapsed);
                         string time = $"Time elapsed: {stopwatch.Elapsed}";
                         Console.WriteLine(time);
-                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time , hashes);
+                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time , hashes[0]);
                         SendResult(sw, resultObject);
                     }
                 }
@@ -105,7 +131,7 @@ namespace SlaveCrack
             sw.Flush();
             Results.Clear();
         }
-        private IList<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
+        private List<string> GetWorkStarted(StreamReader sr, StreamWriter sw)
         {
             sw.WriteLine("getdc");
             string receivedstring = "";
@@ -118,7 +144,7 @@ namespace SlaveCrack
                 }
                 receivedstring += incomingString;
             }
-            IList<string> list = JsonConvert.DeserializeObject<List<string>>(receivedstring);
+            List<string> list = JsonConvert.DeserializeObject<List<string>>(receivedstring);
             return list;
         }
 
