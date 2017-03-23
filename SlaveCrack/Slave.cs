@@ -30,8 +30,7 @@ namespace SlaveCrack
         public List<string> DictionaryList { get; set; }
         public TimeSpan TimeElapsed { get; set; }
         public List<FullUser> Results { get; set; }
-
-        // TODO Slave kan blive mere async i sine cracking handlinger og what not
+        
         public Slave()
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
@@ -66,46 +65,49 @@ namespace SlaveCrack
                     {
                         Console.WriteLine("Working!");
                         Stopwatch stopwatch = Stopwatch.StartNew();
-                        int[] hashes = {0};
-                        // TODO Split up and mak use of more threads
-                        //var numOfThreads = Environment.ProcessorCount;
-                        //var split = DictionaryList.Count / numOfThreads;
-                        //var indexer = 0;
-                        //for (int i = 0; i < numOfThreads; i++)
-                        //{
-                        //    if (split < indexer || indexer > DictionaryList.Count || split > DictionaryList.Count)
-                        //    {
-
-                        //    }
-                        //    List<string> newList = DictionaryList.GetRange(indexer, split);
-
-                        //    Task.Run(() =>
-                        //    {
-                        //        foreach (var word in newList)
-                        //        {
-                        //            Results.AddRange(CheckWordWithVariations(word, UserInfosList, ref hashes[0]));
-                        //        }
-                        //    });
-                        //    indexer += split;
-                        //    split += split;
-                        //http://stackoverflow.com/questions/11463734/split-a-list-into-smaller-lists-of-n-size
-                        //}http://stackoverflow.com/questions/419019/split-list-into-sublists-with-linq
-                        //Task.WaitAll();
-                        foreach (var dictionaryEntry in DictionaryList)
+                        int[] hashes = { 0 };
+                        var numOfThreads = Environment.ProcessorCount;
+                        if (numOfThreads > 1)
                         {
-                            Results.AddRange(CheckWordWithVariations(dictionaryEntry, UserInfosList, ref hashes[0]));
+                            var split = DictionaryList.Count / numOfThreads;
+                            var lists = SplitList(DictionaryList, split);
+                            var listCount = lists.Count;
+                            var tasks = new List<Task>();
+                            if (listCount > numOfThreads)
+                            {
+                                var diff = listCount - numOfThreads;
+                                if (diff > 0)
+                                {
+                                    numOfThreads += diff;
+                                }
+                            }
+                            for (int i = 0; i < numOfThreads; i++)
+                            {
+                                var i1 = i;
+                                tasks.Add(Task.Run(() =>
+                                {
+                                    CrackMethod(hashes, lists[i1]);
+                                }));
+                            }
+                            Task.WaitAll(tasks.ToArray()); 
+                        }
+                        else
+                        {
+                            CrackMethod(hashes, DictionaryList);
                         }
                         stopwatch.Stop();
-                        string total = $"Theres {UserInfosList.Count} passwords left\n{Results.Count} passwords was found\n{DictionaryList.Count} words was tested";
+                        string total =
+                            $"Theres {UserInfosList.Count} passwords left\n{Results.Count} passwords was found\n{DictionaryList.Count} words was tested";
                         Console.WriteLine(total);
                         Console.WriteLine();
                         TimeElapsed = TimeElapsed.Add(stopwatch.Elapsed);
                         string time = $"Time elapsed: {stopwatch.Elapsed}";
                         Console.WriteLine(time);
-                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time , hashes[0]);
+                        var resultObject = new CrackResults(Results, stopwatch.Elapsed, total, time, hashes[0]);
                         SendResult(sw, resultObject);
                     }
                 }
+
             }
             catch (Exception e)
             {
@@ -120,9 +122,30 @@ namespace SlaveCrack
                     Console.WriteLine(e);
                 }
             }
-            
+
         }
 
+        private void CrackMethod(int[] hashes, List<string> lists)
+        {
+            foreach (var word in lists)
+            {
+                Results.AddRange(CheckWordWithVariations(word, UserInfosList, ref hashes[0]));
+            }
+        }
+
+        private static List<List<T>> SplitList<T>(List<T> collection, int size)
+        {
+            var chunks = new List<List<T>>();
+            var chunkCount = collection.Count() / size;
+
+            if (collection.Count % size > 0)
+                chunkCount++;
+
+            for (var i = 0; i < chunkCount; i++)
+                chunks.Add(collection.Skip(i * size).Take(size).ToList());
+
+            return chunks;
+        }
         private void SendResult(StreamWriter sw, CrackResults cr)
         {
             string serializedobj = JsonConvert.SerializeObject(cr);
