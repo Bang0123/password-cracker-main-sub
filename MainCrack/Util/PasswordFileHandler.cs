@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
-using MasterCrack.Model;
+using MainCrack.Model;
 
-namespace MasterCrack.Util
+namespace MainCrack.Util
 {
     public class PasswordFileHandler
     {

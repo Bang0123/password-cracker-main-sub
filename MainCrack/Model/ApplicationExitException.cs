@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace MasterCrack.Model
+namespace MainCrack.Model
 {
     [Serializable]
     public class ApplicationExitException : Exception

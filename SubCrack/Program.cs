@@ -1,13 +1,13 @@
 ﻿using static System.Console;
 
-namespace SlaveCrack
+namespace SubCrack
 {
     public class Program
     {
         static void Main(string[] args)
         {
-            Slave slave = new Slave();
-            slave.BeginWork();
+            Sub sub = new Sub();
+            sub.BeginWork();
 
             ReadLine();
         }

@@ -1,4 +1,4 @@
-﻿namespace MasterCrack.Model
+﻿namespace MainCrack.Model
 {
     
     public interface IUnencryptedPassword

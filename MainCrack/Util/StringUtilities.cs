@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Text;
 
-namespace MasterCrack.Util
+namespace MainCrack.Util
 {
     public class StringUtilities
     {

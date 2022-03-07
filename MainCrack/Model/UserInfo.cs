@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace MasterCrack.Model
+namespace MainCrack.Model
 {
     /// <summary>
     /// username + encrypted password.

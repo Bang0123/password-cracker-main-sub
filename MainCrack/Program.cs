@@ -1,13 +1,13 @@
 ﻿using static System.Console;
 
-namespace MasterCrack
+namespace MainCrack
 {
     public class Program
     {
         static void Main(string[] args)
         {
-            var master = new Master();
-            master.Invoke();
+            var main = new Main();
+            main.Invoke();
 
             ReadLine();
         }

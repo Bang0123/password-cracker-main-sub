@@ -3,14 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using MasterCrack.Model;
+using MainCrack.Model;
 using Newtonsoft.Json;
 
-namespace MasterCrack
+namespace MainCrack
 {
     public class ConnectionHandler : IDisposable
     {
-        public Master MyMaster { get; set; }
+        public Main MyMaster { get; set; }
         private bool _workload;
         private TcpClient connectionSocket;
 
@@ -19,7 +19,7 @@ namespace MasterCrack
         {
             connectionSocket = tcpClient;
         }
-        public ConnectionHandler(TcpClient tcpClient, Master master)
+        public ConnectionHandler(TcpClient tcpClient, Main master)
         {
             connectionSocket = tcpClient;
             MyMaster = master;

@@ -3,23 +3,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using MasterCrack.Model;
-using MasterCrack.Util;
+using MainCrack.Model;
+using MainCrack.Util;
 using Newtonsoft.Json;
 
-namespace SlaveCrack
+namespace SubCrack
 {
 
     /// <summary>
     /// Only the master keeps the results ;)
     /// </summary>
-    public class Slave
+    public class Sub
     {
         public TcpClient TcpClient { get; set; }
         public HashAlgorithm HashAlgorithm { get; }
@@ -31,7 +29,7 @@ namespace SlaveCrack
         public TimeSpan TimeElapsed { get; set; }
         public List<FullUser> Results { get; set; }
         
-        public Slave()
+        public Sub()
         {
             HashAlgorithm = new SHA1CryptoServiceProvider();
             //_messageDigest = new MD5CryptoServiceProvider();

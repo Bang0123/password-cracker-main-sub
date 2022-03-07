@@ -7,12 +7,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using MasterCrack.Model;
-using MasterCrack.Util;
+using MainCrack.Model;
+using MainCrack.Util;
 
-namespace MasterCrack
+namespace MainCrack
 {
-    public class Master
+    public class Main
     {
         public int Indexer { get; set; }
         public string[] DicPath { get; } = { "webster-dictionary.txt", "webster-dictionary-reduced.txt" };
@@ -36,7 +36,7 @@ namespace MasterCrack
         public bool DoneBool { get; set; }
         public bool EndOfDictionary { get; set; }
 
-        public Master()
+        public Main()
         {
             EndPoint = new IPEndPoint(IPAddress.Any, Eport);
             MasterServer = new TcpListener(EndPoint);
